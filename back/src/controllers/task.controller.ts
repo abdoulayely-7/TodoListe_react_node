@@ -73,20 +73,27 @@ export async function createTasks(req: AuthRequest, res: Response) {
   const user = req.user;
   if (!user) return res.status(401).json({ message: "Not authenticated" });
 
-  const multerReq = req as AuthRequest & {
-    files?: { [fieldname: string]: Express.Multer.File[] }
-  };
+  // Supporte upload.any() (array) et upload.fields() (object)
+  const anyFiles = (req as any).files as Express.Multer.File[] | undefined;
+  let photoPath: string | undefined;
+  let audioPath: string | undefined;
 
-  const photoPath = multerReq.files?.photo?.[0]
-    ? `/uploads/photos/${multerReq.files.photo[0].filename}`
-    : undefined;
+  if (Array.isArray(anyFiles)) {
+    const photoFile = anyFiles.find(f => f.fieldname === 'photo');
+    const audioFile = anyFiles.find(f => f.fieldname === 'audio');
+    if (photoFile) photoPath = `/uploads/photos/${photoFile.filename}`;
+    if (audioFile) audioPath = `/uploads/audios/${audioFile.filename}`;
+  } else {
+    const filesMap = (req as any).files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    photoPath = filesMap?.photo?.[0] ? `/uploads/photos/${filesMap.photo[0].filename}` : undefined;
+    audioPath = filesMap?.audio?.[0] ? `/uploads/audios/${filesMap.audio[0].filename}` : undefined;
+  }
 
-  const audioPath = multerReq.files?.audio?.[0]
-    ? `/uploads/audio/${multerReq.files.audio[0].filename}`
-    : undefined;
+  // Exclure les champs 'photo' et 'audio' envoyés en body (ex: {})
+  const { photo: _photoBody, audio: _audioBody, ...restBody } = req.body as any;
 
   const payload = {
-    ...req.body,
+    ...restBody,
     userId: user.id,
     ...(photoPath && { photo: photoPath }),
     ...(audioPath && { audio: audioPath }),
@@ -104,7 +111,6 @@ export async function createTasks(req: AuthRequest, res: Response) {
 
 
 export async function updateTasks(req: AuthRequest, res: Response) {
-  // TypeScript assertion pour l'accès aux paramètres d'URL
   const paramsReq = req as AuthRequest & { params: { id: string } };
   const idParam = paramsReq.params.id;
   if (!idParam) return res.status(400).json({ message: "id required" });
@@ -113,16 +119,31 @@ export async function updateTasks(req: AuthRequest, res: Response) {
   if (Number.isNaN(id)) return res.status(400).json({ message: "id must be a number" });
 
   try {
-    // TypeScript assertion pour l'accès au fichier uploadé par multer
-    const multerReq = req as AuthRequest & { file?: Express.Multer.File };
-    const photoPath = multerReq.file ? `/uploads/${multerReq.file.filename}` : undefined;
-    const payload = { 
-      ...req.body,
-      ...(photoPath && { photo: photoPath })
+    const anyFiles = (req as any).files as Express.Multer.File[] | undefined;
+    let photoPath: string | undefined;
+    let audioPath: string | undefined;
+
+    if (Array.isArray(anyFiles)) {
+      const photoFile = anyFiles.find(f => f.fieldname === 'photo');
+      const audioFile = anyFiles.find(f => f.fieldname === 'audio');
+      if (photoFile) photoPath = `/uploads/photos/${photoFile.filename}`;
+      if (audioFile) audioPath = `/uploads/audios/${audioFile.filename}`;
+    } else {
+      const filesMap = (req as any).files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+      photoPath = filesMap?.photo?.[0] ? `/uploads/photos/${filesMap.photo[0].filename}` : undefined;
+      audioPath = filesMap?.audio?.[0] ? `/uploads/audios/${filesMap.audio[0].filename}` : undefined;
+    }
+
+    // Exclure les champs 'photo' et 'audio' envoyés en body (ex: {})
+    const { photo: _photoBody, audio: _audioBody, ...restBody } = req.body as any;
+
+    const payload = {
+      ...restBody,
+      ...(photoPath && { photo: photoPath }),
+      ...(audioPath && { audio: audioPath }),
     };
 
     const updated = await taskService.update(id, payload);
-    // Record UPDATE action
     try {
       if (req.user) {
         await actionHistoryService.record({ userId: Number(req.user.id), taskId: updated.id, action: "UPDATE", details: `Updated task ${updated.id}` });

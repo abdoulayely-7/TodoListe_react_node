@@ -22,48 +22,56 @@ export const tasksService = {
   // Créer une nouvelle tâche
   createTask: async (taskData) => {
     const formData = new FormData();
-    
-    // Ajouter tous les champs sauf le fichier
+
+    // Ajouter tous les champs texte (exclure fichiers)
     Object.keys(taskData).forEach(key => {
-      if (key !== 'photo') {
+      if (key !== 'photo' && key !== 'audio') {
         formData.append(key, taskData[key]);
       }
     });
 
-    // Ajouter le fichier s'il existe
+    // Photo
     if (taskData.photo) {
       formData.append('photo', taskData.photo);
     }
 
-    const response = await api.post('/tasks', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    // Audio: ajouter avec un nom de fichier explicite
+    if (taskData.audio) {
+      const blob = taskData.audio;
+      const mime = blob.type || 'audio/webm';
+      const ext = mime.includes('webm') ? 'webm' : mime.includes('ogg') ? 'ogg' : 'bin';
+      formData.append('audio', blob, `recording.${ext}`);
+    }
+
+    const response = await api.post('/tasks', formData);
     return response.data;
   },
 
   // Mettre à jour une tâche
   updateTask: async (id, taskData) => {
     const formData = new FormData();
-    
-    // Ajouter tous les champs sauf le fichier
+
+    // Ajouter tous les champs texte (exclure fichiers)
     Object.keys(taskData).forEach(key => {
-      if (key !== 'photo') {
+      if (key !== 'photo' && key !== 'audio') {
         formData.append(key, taskData[key]);
       }
     });
 
-    // Ajouter le fichier s'il existe
+    // Photo
     if (taskData.photo) {
       formData.append('photo', taskData.photo);
     }
 
-    const response = await api.put(`/tasks/${id}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    // Audio
+    if (taskData.audio) {
+      const blob = taskData.audio;
+      const mime = blob.type || 'audio/webm';
+      const ext = mime.includes('webm') ? 'webm' : mime.includes('ogg') ? 'ogg' : 'bin';
+      formData.append('audio', blob, `recording.${ext}`);
+    }
+
+    const response = await api.put(`/tasks/${id}`, formData);
     return response.data;
   },
 

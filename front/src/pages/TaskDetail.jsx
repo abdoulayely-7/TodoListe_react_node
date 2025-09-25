@@ -290,6 +290,16 @@ const TaskDetail = () => {
               </div>
             )}
 
+            {/* Audio */}
+            {task.audio && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Message vocal</h3>
+                <audio controls src={`http://localhost:3000${task.audio}`} className="w-full">
+                  Votre navigateur ne supporte pas l'élément audio.
+                </audio>
+              </div>
+            )}
+
             {/* Utilisateurs autorisés */}
             <div className="mb-6">
               <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">

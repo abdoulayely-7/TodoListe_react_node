@@ -47,11 +47,13 @@ export async function login(req: Request<{}, {}, LoginInput>, res: Response) {
 
         const {token,user} = await useservice.login(verif.data)
 
-        res.cookie("acces_token",token,{
-            httpOnly:true,
-            secure:false,
-            sameSite:"strict",
-            maxAge:60*60*1000
+        const isProd = process.env.NODE_ENV === 'production';
+        res.cookie("acces_token", token, {
+            httpOnly: true,
+            sameSite: isProd ? "none" : "lax",
+            secure: isProd,
+            maxAge: 60 * 60 * 1000,
+            path: '/',
         });
 
         res.json({
@@ -113,10 +115,12 @@ export async function getAllUsers(req: AuthRequest, res: Response) {
 export async function logout(req: Request, res: Response) {
     try {
         // Invalider le cookie côté client
+        const isProd = process.env.NODE_ENV === 'production';
         res.clearCookie('acces_token', {
             httpOnly: true,
-            secure: false,
-            sameSite: 'strict'
+            sameSite: isProd ? 'none' : 'lax',
+            secure: isProd,
+            path: '/',
         });
         return res.status(200).json({ message: 'Déconnexion réussie' });
     } catch (error) {
