@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Etat {
+  ENCOURS
+  TERMINER
+}
+
+enum ActionType {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+}
+
+model Task {
+  id           Int      @id @default(autoincrement())
+  titre        String
+  description  String
+  etat         Etat     @default(ENCOURS)
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  allowedUsers User[]   @relation("AllowedTasks")
+  photo        String? 
+  audio        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  actionHistories ActionHistory[]
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  nom          String
+  email        String   @unique
+  password     String
+  tasks        Task[]
+  allowedTasks Task[]   @relation("AllowedTasks")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  actionHistories ActionHistory[]
+}
+
+
+model ActionHistory {
+  id        Int        @id @default(autoincrement())
+  action    ActionType
+  details   String?
+  createdAt DateTime   @default(now())
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
